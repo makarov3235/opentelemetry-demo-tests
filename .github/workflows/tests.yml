@@ -1,0 +1,27 @@
+name: QA Automation Tests
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check CI Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print start message
+        run: echo "GitHub Actions workflow started successfully"
+
+      - name: Print environment information
+        run: |
+          echo "Operating system:"
+          uname -a
+          echo "Python will be configured in the next step of our learning plan"
