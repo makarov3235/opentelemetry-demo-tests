@@ -11,26 +11,182 @@ on:
 
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  api-tests:
-    name: API Tests
+  regression:
+    name: Full Regression Suite
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-      - name: Checkout repository
+      # 1. Получаем тестовый проект
+      - name: Checkout test repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: requirements.txt
-
-      - name: Install dependencies
+      # 2. Устанавливаем Docker Compose
+      # Docker обычно уже установлен на GitHub-hosted runner.
+      - name: Check Docker
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          docker --version
+          docker compose version
 
-      - name: Run API tests
-        run: pytest tests/api -v
+      # 3. Получаем исходники OpenTelemetry Demo
+      - name: Checkout OpenTelemetry Demo
+        uses: actions/checkout@v4
+        with:
+          repository: open-telemetry/opentelemetry-demo
+          ref: gfdbd62ca
+          path: opentelemetry-demo
+
+      # 4. Проверяем версию исходников
+      - name: Show Demo revision
+        working-directory: opentelemetry-demo
+        run: git log -1 --oneline
+
+      # 5. Проверяем конфигурацию Demo
+      - name: Validate Demo Compose
+        working-directory: opentelemetry-demo
+        run: |
+          docker compose \
+            -f compose.yaml \
+            -f compose.full.yaml \
+            -f compose.observability.yaml \
+            config --quiet
+
+      # 6. Запускаем инфраструктуру
+      - name: Start OpenTelemetry Demo
+        working-directory: opentelemetry-demo
+        run: |
+          docker compose \
+            -f compose.yaml \
+            -f compose.full.yaml \
+            -f compose.observability.yaml \
+            up -d
+
+      # 7. Проверяем готовность инфраструктуры
+      - name: Wait for Demo services
+        shell: bash
+        run: |
+          set -e
+
+          echo "Checking Docker network..."
+          docker network inspect opentelemetry-demo
+
+          echo "Waiting for frontend..."
+
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/ > /dev/null; then
+              echo "Frontend is ready"
+              break
+            fi
+
+            if [ "$attempt" -eq 60 ]; then
+              echo "Frontend did not become ready"
+              exit 1
+            fi
+
+            echo "Waiting for frontend... attempt $attempt/60"
+            sleep 5
+          done
+
+          echo "Waiting for PostgreSQL..."
+
+          for attempt in $(seq 1 30); do
+            if docker exec astronomy-db \
+              pg_isready -U astronomy_user -d astronomy_db; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+
+            if [ "$attempt" -eq 30 ]; then
+              echo "PostgreSQL did not become ready"
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          echo "Waiting for Kafka..."
+
+          for attempt in $(seq 1 30); do
+            if docker exec kafka \
+              bash -c 'echo > /dev/tcp/127.0.0.1/9092' 2>/dev/null; then
+              echo "Kafka port is available"
+              break
+            fi
+
+            if [ "$attempt" -eq 30 ]; then
+              echo "Kafka port did not become available"
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+      # 8. Запускаем полный набор тестов
+      - name: Run regression tests
+        id: tests
+        run: |
+          docker compose run --build --rm \
+            -e BASE_URL=http://host.docker.internal:8080 \
+            -e DB_HOST=astronomy-db \
+            -e DB_PORT=5432 \
+            -e KAFKA_BOOTSTRAP_SERVERS=kafka:9092 \
+            aqa-tests \
+            pytest tests -v --alluredir=allure-results
+
+      # 9. Сохраняем логи Demo независимо от результата тестов
+      - name: Collect Demo logs
+        if: always()
+        working-directory: opentelemetry-demo
+        run: |
+          docker compose \
+            -f compose.yaml \
+            -f compose.full.yaml \
+            -f compose.observability.yaml \
+            logs --no-color > ../demo-logs.txt 2>&1 || true
+
+      # 10. Сохраняем состояние контейнеров
+      - name: Collect Docker state
+        if: always()
+        run: |
+          docker ps -a > docker-containers.txt
+          docker network ls > docker-networks.txt
+          docker images > docker-images.txt
+
+      # 11. Загружаем результаты тестирования
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+      # 12. Загружаем логи инфраструктуры
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-diagnostics
+          path: |
+            demo-logs.txt
+            docker-containers.txt
+            docker-networks.txt
+            docker-images.txt
+          if-no-files-found: warn
+          retention-days: 14
+
+      # 13. Останавливаем инфраструктуру
+      - name: Stop OpenTelemetry Demo
+        if: always()
+        working-directory: opentelemetry-demo
+        run: |
+          docker compose \
+            -f compose.yaml \
+            -f compose.full.yaml \
+            -f compose.observability.yaml \
+            down -v --remove-orphans
