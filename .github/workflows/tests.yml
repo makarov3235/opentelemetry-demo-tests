@@ -12,16 +12,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  check:
-    name: Check CI Pipeline
+  api-tests:
+    name: API Tests
     runs-on: ubuntu-latest
 
     steps:
-      - name: Print start message
-        run: echo "GitHub Actions workflow started successfully"
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Print environment information
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
         run: |
-          echo "Operating system:"
-          uname -a
-          echo "Python will be configured in the next step of our learning plan"
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run API tests
+        run: pytest tests/api -v
