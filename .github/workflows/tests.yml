@@ -37,8 +37,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: open-telemetry/opentelemetry-demo
-          ref: gfdbd62ca
+          ref: fdbd62ca1ccd98d1752724315994bd2bf67a68db
           path: opentelemetry-demo
+          fetch-depth: 1
 
       # 4. Проверяем версию исходников
       - name: Show Demo revision
@@ -183,10 +184,15 @@ jobs:
       # 13. Останавливаем инфраструктуру
       - name: Stop OpenTelemetry Demo
         if: always()
-        working-directory: opentelemetry-demo
         run: |
-          docker compose \
-            -f compose.yaml \
-            -f compose.full.yaml \
-            -f compose.observability.yaml \
-            down -v --remove-orphans
+          if [ -f opentelemetry-demo/compose.yaml ]; then
+            cd opentelemetry-demo
+
+            docker compose \
+              -f compose.yaml \
+              -f compose.full.yaml \
+              -f compose.observability.yaml \
+              down -v --remove-orphans
+          else
+            echo "OpenTelemetry Demo was not checked out; skipping cleanup"
+          fi
