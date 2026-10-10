@@ -162,6 +162,24 @@ jobs:
             sleep 5
           done
 
+      # 7.1. Запускаем полный набор тестов
+      - name: Diagnose PostgreSQL
+        run: |
+          docker exec astronomy-db \
+            psql -U astronomy_user -d astronomy_db -c \
+            "SELECT current_database(), current_user;"
+
+          docker exec astronomy-db \
+            psql -U astronomy_user -d astronomy_db -c \
+            "SELECT COUNT(*) AS orders_count FROM accounting.\"order\";"
+
+          docker exec astronomy-db \
+            psql -U astronomy_user -d astronomy_db -c \
+            "SELECT table_schema, table_name
+             FROM information_schema.tables
+             WHERE table_schema = 'accounting'
+             ORDER BY table_name;"
+
       # 8. Запускаем полный набор тестов
       - name: Run regression tests
         id: tests
