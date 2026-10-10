@@ -56,6 +56,15 @@ jobs:
             -f compose.observability.yaml \
             config --quiet
 
+          echo "===== Kafka configuration ====="
+
+          docker compose \
+            -f compose.yaml \
+            -f compose.full.yaml \
+            -f compose.observability.yaml \
+            config --format json |
+            jq '.services.kafka'
+
       # 6. Запускаем инфраструктуру
       - name: Start OpenTelemetry Demo
         working-directory: opentelemetry-demo
