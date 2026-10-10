@@ -1,0 +1,18 @@
+services:
+  aqa-tests:
+    build: .
+    container_name: aqa-tests
+    environment:
+      BASE_URL: ${BASE_URL:-http://host.docker.internal:8080}
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-17469}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+    volumes:
+      - ./allure-results:/app/allure-results
+    networks:
+      - opentelemetry-demo
+    command: pytest tests -v --alluredir=allure-results
+
+networks:
+  opentelemetry-demo:
+    external: true

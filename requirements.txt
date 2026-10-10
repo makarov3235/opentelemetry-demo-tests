@@ -1,0 +1,8 @@
+pytest
+requests
+allure-pytest
+psycopg2-binary
+kafka-python
+pytest-playwright
+Faker
+protobuf
