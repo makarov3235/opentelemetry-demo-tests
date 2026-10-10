@@ -128,39 +128,37 @@ jobs:
             sleep 2
           done
 
-          echo "Waiting for Kafka..."
+          echo "Waiting for Kafka container health..."
 
           for attempt in $(seq 1 60); do
-            if docker exec kafka \
-              bash -c 'echo > /dev/tcp/127.0.0.1/9092' 2>/dev/null; then
-              echo "Kafka port 9092 is available"
+            health=$(docker inspect \
+              --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' \
+              kafka)
+          
+            echo "Kafka health: $health (attempt $attempt/60)"
+          
+            if [ "$health" = "healthy" ]; then
+              echo "Kafka is healthy"
               break
             fi
-
+          
             if [ "$attempt" -eq 60 ]; then
-              echo "Kafka port did not become available"
-      
+              echo "Kafka did not become healthy"
+          
               echo "===== Kafka container status ====="
               docker ps -a --filter name=kafka
-      
-              echo "===== Kafka container status ====="
-              docker inspect kafka \
-                --format='Status={{.State.Status}} ExitCode={{.State.ExitCode}} Error={{.State.Error}}'
-              
+          
+              echo "===== Kafka health details ====="
+              docker inspect \
+                --format '{{json .State.Health}}' \
+                kafka
+          
               echo "===== Kafka logs ====="
-              docker logs --tail 300 kafka 2>&1 || true
-              
-              echo "===== Kafka port 9092 ====="
-              docker exec kafka bash -c \
-                'cat /proc/net/tcp /proc/net/tcp6 | grep -i ":2382" || true' || true
-              
-              echo "===== Kafka network ====="
-              docker network inspect opentelemetry-demo
-              
+              docker logs --tail 200 kafka
+          
               exit 1
             fi
-      
-            echo "Waiting for Kafka... attempt $attempt/60"
+          
             sleep 5
           done
 
