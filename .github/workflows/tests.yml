@@ -111,19 +111,30 @@ jobs:
 
           echo "Waiting for Kafka..."
 
-          for attempt in $(seq 1 30); do
+          for attempt in $(seq 1 60); do
             if docker exec kafka \
               bash -c 'echo > /dev/tcp/127.0.0.1/9092' 2>/dev/null; then
-              echo "Kafka port is available"
+              echo "Kafka port 9092 is available"
               break
             fi
 
-            if [ "$attempt" -eq 30 ]; then
+            if [ "$attempt" -eq 60 ]; then
               echo "Kafka port did not become available"
+      
+              echo "===== Kafka container status ====="
+              docker ps -a --filter name=kafka
+      
+              echo "===== Kafka logs ====="
+              docker logs --tail 200 kafka
+      
+              echo "===== Kafka network ====="
+              docker network inspect opentelemetry-demo
+      
               exit 1
             fi
-
-            sleep 2
+      
+            echo "Waiting for Kafka... attempt $attempt/60"
+            sleep 5
           done
 
       # 8. Запускаем полный набор тестов
