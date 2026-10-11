@@ -8,3 +8,5 @@ Faker
 protobuf
 jsonschema
 pytest-xdist
+httpx
+pytest-asyncio

@@ -6,7 +6,7 @@ BASE_URL = os.getenv(
 )
 
 DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = int(os.getenv("DB_PORT", "57169"))
+DB_PORT = int(os.getenv("DB_PORT", "34119"))
 DB_NAME = os.getenv("DB_NAME", "astronomy_db")
 DB_USER = os.getenv("DB_USER", "astronomy_user")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "astronomy_password")
