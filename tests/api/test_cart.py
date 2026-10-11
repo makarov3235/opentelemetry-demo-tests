@@ -1,6 +1,7 @@
 import pytest
 import allure
 from data.test_data import PRODUCT_ID, DEFAULT_CURRENCY, DEFAULT_QUANTITY
+from uuid import uuid4
 
 #Positive
 @allure.feature("Cart")
@@ -12,7 +13,7 @@ from data.test_data import PRODUCT_ID, DEFAULT_CURRENCY, DEFAULT_QUANTITY
     ]
 )
 def test_add_to_cart(cart_client, currency, product_id, quantity):
-    user_id = '2ec6efab-8e41-4ec1-b948-cffe4b3036ff'
+    user_id = str(uuid4())
     cart_client.clear_cart(user_id)
     response = cart_client.add_to_cart(currency, product_id, quantity, user_id)
     body = response.json()
@@ -26,7 +27,7 @@ def test_add_to_cart(cart_client, currency, product_id, quantity):
 @allure.feature("Cart")
 @allure.story("Clear cart")
 def test_clear_cart(cart_client):
-    user_id = '2ec6efab-8e41-4ec1-b948-cffe4b3036dd'
+    user_id = str(uuid4())
     response = cart_client.clear_cart(user_id)
 
     assert response.status_code == 204
@@ -43,7 +44,7 @@ def test_clear_cart(cart_client):
 @allure.feature("Cart")
 @allure.story("Add to cart so many products (1000)")
 def test_add_to_cart_so_many_products(cart_client):
-    user_id = '2ec6efab-8e41-4ec1-b948-cffe4b3036dd'
+    user_id = str(uuid4())
     quantity = 1000
     cart_client.clear_cart(user_id)
     response = cart_client.add_to_cart(DEFAULT_CURRENCY, PRODUCT_ID, quantity, user_id)
@@ -63,7 +64,7 @@ def test_add_to_cart_so_many_products(cart_client):
     ]
 )
 def test_add_to_cart_soo_many_products(cart_client, currency, product_id, quantity):
-    user_id = '2ec6efab-8e41-4ec1-b948-cffe4b3036dd'
+    user_id = str(uuid4())
     cart_client.clear_cart(user_id)
     response = cart_client.add_to_cart(currency, product_id, quantity, user_id)
 
@@ -73,7 +74,7 @@ def test_add_to_cart_soo_many_products(cart_client, currency, product_id, quanti
 @allure.feature("Cart")
 @allure.story("Add to cart product with incorrect product id")
 def test_add_to_cart_incorrect_product_id(cart_client):
-    user_id = '2ec6efab-8e41-4ec1-b948-cffe4b3036dd'
+    user_id = str(uuid4())
     product_id = 'Pasha'
     cart_client.clear_cart(user_id)
     response = cart_client.add_to_cart(DEFAULT_CURRENCY, product_id, DEFAULT_QUANTITY, user_id)
@@ -105,7 +106,7 @@ def test_add_to_cart_empty_info_about_user(cart_client):
 @allure.feature("Cart")
 @allure.story("Add to cart with empty info about product")
 def test_add_to_cart_empty_info_about_product(cart_client):
-    user_id = '2ec6efab-8e41-4ec1-b948-cffe4b3036dd'
+    user_id = str(uuid4())
     cart_client.clear_cart(user_id)
     response = cart_client.add_to_cart(DEFAULT_CURRENCY, user_id)
 

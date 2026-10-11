@@ -6,3 +6,5 @@ kafka-python
 pytest-playwright
 Faker
 protobuf
+jsonschema
+pytest-xdist
